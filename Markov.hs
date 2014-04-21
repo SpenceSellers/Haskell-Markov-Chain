@@ -44,11 +44,6 @@ randomStartWord markov = do
   index <- getRandomR (0, (length words) - 1)
   return $ words !! index
          
-randNum :: RandomGen g => (Int, Int) -> Rand g Int
-randNum (min, max) = do
-  rand <- getRandomR (min, max)
-  return rand
-
 
 nextWord :: RandomGen g => Transitions -> Rand g String
 nextWord transitions = do
