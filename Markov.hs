@@ -4,7 +4,7 @@ import Text.Regex
 --import System.Random
 import Control.Monad.State
 import Control.Monad.Random
-
+import Debug.Trace
 type Transitions = Map.Map String Integer 
 
 type Markov = Map.Map String Transitions
@@ -12,9 +12,8 @@ type Markov = Map.Map String Transitions
 main :: IO ()
 main = do
   input <- getContents
-  rgen <- getStdGen
-  let markov = constructMarkov $ tokenize input
-  putStrLn $ randomStartWord rgen markov
+  story <- evalRandIO $ generate (constructMarkov (tokenize input)) 1000
+  putStrLn story
   
 tokenize :: String -> [String]
 tokenize s =
@@ -39,11 +38,12 @@ constructMarkov words =
 transitionList :: [String] -> [(String, String)]
 transitionList words = zip words (tail words)
 
-randomStartWord :: StdGen -> Markov -> String
-randomStartWord rand markov =
-    let (words, _)  = unzip $ Map.toList markov
-        in words !! (evalRand (randNum (0, length words - 1)) rand)
-
+randomStartWord :: RandomGen g => Markov -> Rand g String
+randomStartWord markov = do
+  let (words, _)  = unzip $ Map.toList markov
+  index <- getRandomR (0, (length words) - 1)
+  return $ words !! index
+         
 randNum :: RandomGen g => (Int, Int) -> Rand g Int
 randNum (min, max) = do
   rand <- getRandomR (min, max)
@@ -64,6 +64,5 @@ buildString markov word num = do
   
 generate :: RandomGen g => Markov -> Int -> Rand g String
 generate markov len = do
-  gen <- get
-  let start = randomStartWord gen markov
+  start <- randomStartWord markov
   buildString markov start len
