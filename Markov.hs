@@ -1,8 +1,9 @@
 module Main where
 import qualified Data.Map as Map
 import Text.Regex
-import System.Random
+--import System.Random
 import Control.Monad.State
+import Control.Monad.Random
 
 type Transitions = Map.Map String Integer 
 
@@ -41,12 +42,28 @@ transitionList words = zip words (tail words)
 randomStartWord :: StdGen -> Markov -> String
 randomStartWord rand markov =
     let (words, _)  = unzip $ Map.toList markov
-        in words !! (evalState (randNum (0, length words - 1)) rand)
+        in words !! (evalRand (randNum (0, length words - 1)) rand)
 
-randNum :: (Int, Int) -> State StdGen Int
+randNum :: RandomGen g => (Int, Int) -> Rand g Int
 randNum (min, max) = do
-    gen <- get
-    let (num, newgen) = randomR (min, max) gen
-      in do
-        put newgen
-        return num
+  rand <- getRandomR (min, max)
+  return rand
+
+
+nextWord :: RandomGen g => Transitions -> Rand g String
+nextWord transitions = do
+  word <- fromList (map (\(word, weight) -> (word, toRational weight)) (Map.toList transitions))
+  return word
+
+buildString :: RandomGen g => Markov -> String -> Int -> Rand g String
+buildString _ _ 0 = return ""
+buildString markov word num = do
+  next <- nextWord (markov Map.! word)
+  rest <- buildString markov next (num - 1)
+  return (next ++ " " ++ rest)
+  
+generate :: RandomGen g => Markov -> Int -> Rand g String
+generate markov len = do
+  gen <- get
+  let start = randomStartWord gen markov
+  buildString markov start len
