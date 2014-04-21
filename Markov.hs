@@ -1,18 +1,18 @@
 module Main where
+import System.Environment
 import qualified Data.Map as Map
 import Text.Regex
---import System.Random
-import Control.Monad.State
 import Control.Monad.Random
-import Debug.Trace
-type Transitions = Map.Map String Integer 
 
+    
+type Transitions = Map.Map String Integer 
 type Markov = Map.Map String Transitions
                 
 main :: IO ()
 main = do
   input <- getContents
-  story <- evalRandIO $ generate (constructMarkov (tokenize input)) 1000
+  sizestr:_ <- getArgs
+  story <- evalRandIO $ generate (constructMarkov (tokenize input)) (read sizestr)
   putStrLn story
   
 tokenize :: String -> [String]
@@ -57,10 +57,13 @@ nextWord transitions = do
 
 buildString :: RandomGen g => Markov -> String -> Int -> Rand g String
 buildString _ _ 0 = return ""
-buildString markov word num = do
-  next <- nextWord (markov Map.! word)
-  rest <- buildString markov next (num - 1)
-  return (next ++ " " ++ rest)
+buildString markov word num =
+  case Map.lookup word markov of
+    Nothing -> return ""
+    Just trans -> do
+      next <- nextWord trans
+      rest <- buildString markov next (num - 1)
+      return (next ++ " " ++ rest)
   
 generate :: RandomGen g => Markov -> Int -> Rand g String
 generate markov len = do
