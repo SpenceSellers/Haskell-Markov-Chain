@@ -3,7 +3,7 @@ import System.Environment
 import qualified Data.Map as Map
 import Text.Regex
 import Control.Monad.Random
-
+import Control.Applicative
     
 type Transitions = Map.Map String Integer 
 type Markov = Map.Map String Transitions
@@ -39,17 +39,17 @@ transitionList :: [String] -> [(String, String)]
 transitionList words = zip words (tail words)
 
 randomStartWord :: RandomGen g => Markov -> Rand g String
-randomStartWord markov = do
-  let (words, _)  = unzip $ Map.toList markov
-  index <- getRandomR (0, (length words) - 1)
-  return $ words !! index
-         
+randomStartWord markov = (words !!) <$> index
+    where (words, _)  = unzip $ Map.toList markov
+          index = getRandomR (0, (length words) - 1)
 
 nextWord :: RandomGen g => Transitions -> Rand g String
-nextWord transitions = do
-  word <- fromList (map (\(word, weight) -> (word, toRational weight)) (Map.toList transitions))
-  return word
-
+nextWord transitions = fromList
+                       (map
+                        (\(word, weight) ->
+                             (word, toRational weight))
+                        (Map.toList transitions))
+                       
 buildString :: RandomGen g => Markov -> String -> Int -> Rand g String
 buildString _ _ 0 = return ""
 buildString markov word num =
